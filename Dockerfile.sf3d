@@ -55,9 +55,9 @@ RUN pip3 install --no-cache-dir \
     rembg \
     huggingface-hub
 
-# Copy handler
+# Copy handler from subdirectory
 WORKDIR /app
-COPY ./handler.py /app/handler.py
+COPY runpod-handler-sf3d/handler.py /app/handler.py
 
 # Set Python path (include both SF3D and ComfyUI)
 ENV PYTHONPATH="/app/sf3d:/app/ComfyUI"
