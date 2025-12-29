@@ -16,7 +16,6 @@ Output:
 """
 
 import runpod
-import torch
 import base64
 import tempfile
 import os
@@ -24,23 +23,35 @@ import time
 import io
 import sys
 from PIL import Image
-from contextlib import nullcontext
-
-# Add SF3D to path
-sys.path.insert(0, '/app/sf3d')
-
-from sf3d.system import SF3D
-from rembg import remove, new_session
 
 # Global model instance (loaded once per worker)
 model = None
 rembg_session = None
+SF3D = None
+remove = None
+new_session = None
+
+
+def lazy_import():
+    """Import GPU-dependent modules only when needed (not at startup)"""
+    global SF3D, remove, new_session
+    if SF3D is None:
+        print("[Handler] Importing SF3D and dependencies...")
+        sys.path.insert(0, '/app/sf3d')
+        from sf3d.system import SF3D as _SF3D
+        from rembg import remove as _remove, new_session as _new_session
+        SF3D = _SF3D
+        remove = _remove
+        new_session = _new_session
+        print("[Handler] Imports complete")
 
 
 def load_model():
     """Load SF3D model (cached globally for performance)"""
-    global model, rembg_session
+    global model, rembg_session, SF3D, new_session
+    lazy_import()
     if model is None:
+        import torch
         print("[Handler] Loading SF3D model...")
         start = time.time()
         model = SF3D.from_pretrained(
@@ -61,7 +72,8 @@ def load_model():
 
 def remove_background(image):
     """Remove background from image using rembg"""
-    global rembg_session
+    global rembg_session, remove, new_session
+    lazy_import()
     if rembg_session is None:
         rembg_session = new_session("u2net")
     return remove(image, session=rembg_session)
@@ -154,6 +166,7 @@ def handler(event):
         device = "cuda"
 
         # Generate mesh with automatic mixed precision
+        import torch
         print(f"[Handler] Generating mesh at texture resolution {texture_resolution}...")
         with torch.no_grad():
             with torch.autocast(device_type=device, dtype=torch.bfloat16):
@@ -195,14 +208,13 @@ def handler(event):
             "execution_time": round(execution_time, 2)
         }
 
-    except torch.cuda.OutOfMemoryError:
-        return {"error": "GPU out of memory. Try a lower texture_resolution (512 or 1024)."}
-
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         print(f"[Handler] Error: {str(e)}")
         print(error_trace)
+        if "out of memory" in str(e).lower():
+            return {"error": "GPU out of memory. Try a lower texture_resolution (512 or 1024)."}
         return {"error": f"Generation failed: {str(e)}"}
 
 
