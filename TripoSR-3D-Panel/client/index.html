@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TripoSR 3D</title>
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <!-- API Configuration Section (collapsible) -->
+  <div id="settings-panel" class="section collapsed">
+    <div class="section-header" onclick="toggleSection('settings-panel')">
+      <h3>API Configuration</h3>
+      <span class="toggle-icon">&#9660;</span>
+    </div>
+    <div class="section-content">
+      <div class="form-group">
+        <label for="api-key">RunPod API Key</label>
+        <div class="input-with-button">
+          <input type="password" id="api-key" placeholder="Enter your RunPod API key">
+          <button id="toggle-key-visibility" class="icon-btn" title="Toggle visibility">&#128065;</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="endpoint-id">TripoSR Endpoint ID</label>
+        <input type="text" id="endpoint-id" placeholder="Enter your endpoint ID">
+      </div>
+
+      <div class="status-indicator" id="connection-status">
+        <span class="dot"></span>
+        <span class="status-text">Not connected</span>
+      </div>
+
+      <div class="button-group">
+        <button id="test-connection-btn">Test Connection</button>
+        <button id="save-settings-btn" class="primary-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generation Section -->
+  <div id="generation-panel" class="section">
+    <h3>Generate 3D Model</h3>
+
+    <!-- Layer Selection -->
+    <div class="form-group">
+      <label for="layer-select">Source Layer</label>
+      <div class="input-with-button">
+        <select id="layer-select">
+          <option value="">-- Select Layer --</option>
+        </select>
+        <button id="refresh-layers" class="icon-btn" title="Refresh layers">&#8635;</button>
+      </div>
+    </div>
+
+    <!-- Generation Settings -->
+    <div class="form-group">
+      <label for="foreground-ratio">
+        Foreground Ratio: <span id="foreground-value">0.85</span>
+      </label>
+      <input type="range" id="foreground-ratio" min="0.5" max="1.0" step="0.05" value="0.85">
+      <small class="help-text">Ratio of foreground in output (higher = tighter crop around subject)</small>
+    </div>
+
+    <div class="form-group">
+      <label for="mesh-resolution">Mesh Resolution</label>
+      <select id="mesh-resolution">
+        <option value="128">128 (Fast)</option>
+        <option value="256" selected>256 (Balanced)</option>
+        <option value="512">512 (Detailed)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="output-format">Output Format</label>
+      <select id="output-format">
+        <option value="glb" selected>GLB (recommended)</option>
+        <option value="obj">OBJ + MTL</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="output-folder">Output Folder</label>
+      <div class="input-with-button">
+        <input type="text" id="output-folder" readonly placeholder="~/Desktop/TripoSR_Output">
+        <button id="browse-folder" class="icon-btn" title="Browse">...</button>
+      </div>
+    </div>
+
+    <!-- Generate Button -->
+    <button id="generate-btn" class="primary-btn large">
+      <span class="btn-text">Generate 3D Model</span>
+      <span class="btn-loader" style="display:none;">&#8635;</span>
+    </button>
+  </div>
+
+  <!-- Progress Section -->
+  <div id="progress-panel" class="section" style="display:none;">
+    <h3>Processing</h3>
+    <div class="progress-info">
+      <span id="progress-status">Preparing...</span>
+      <span id="progress-time">0:00</span>
+    </div>
+    <button id="cancel-btn" class="secondary-btn large">Cancel</button>
+  </div>
+
+  <!-- Results Section -->
+  <div id="results-panel" class="section" style="display:none;">
+    <h3>3D Model Generated</h3>
+
+    <div class="result-preview">
+      <div id="model-thumbnail" class="model-thumbnail">
+        &#128230;
+      </div>
+    </div>
+
+    <div class="result-info">
+      <div class="info-row">
+        <span class="info-label">File:</span>
+        <span id="result-filename">model.glb</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Size:</span>
+        <span id="result-filesize">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Vertices:</span>
+        <span id="result-vertices">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Faces:</span>
+        <span id="result-faces">-</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Path:</span>
+        <span id="result-path" class="result-path">-</span>
+      </div>
+    </div>
+
+    <div class="result-actions">
+      <button id="open-folder-btn" class="secondary-btn">Open in Folder</button>
+      <button id="copy-path-btn" class="secondary-btn">Copy Path</button>
+    </div>
+
+    <button id="generate-another-btn" class="primary-btn large">Generate Another</button>
+  </div>
+
+  <!-- Status Bar -->
+  <div id="status-bar">
+    <div id="status-message">Ready</div>
+    <div id="status-meta">v1.0.0</div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="CSInterface.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
