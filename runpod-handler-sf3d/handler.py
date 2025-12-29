@@ -37,8 +37,25 @@ def lazy_import():
     global SF3D, remove, new_session
     if SF3D is None:
         print("[Handler] Importing SF3D and dependencies...")
-        sys.path.insert(0, '/app/sf3d')
-        from sf3d.system import SF3D as _SF3D
+        # Debug: show what's in the sf3d directory
+        import os
+        sf3d_path = '/app/sf3d'
+        if os.path.exists(sf3d_path):
+            print(f"[Handler] Contents of {sf3d_path}: {os.listdir(sf3d_path)}")
+            sf3d_pkg = os.path.join(sf3d_path, 'sf3d')
+            if os.path.exists(sf3d_pkg):
+                print(f"[Handler] Contents of {sf3d_pkg}: {os.listdir(sf3d_pkg)}")
+
+        # Try different import approaches
+        try:
+            from sf3d.system import SF3D as _SF3D
+        except ImportError as e:
+            print(f"[Handler] Direct import failed: {e}")
+            # Try adding to path explicitly
+            if sf3d_path not in sys.path:
+                sys.path.insert(0, sf3d_path)
+            from sf3d.system import SF3D as _SF3D
+
         from rembg import remove as _remove, new_session as _new_session
         SF3D = _SF3D
         remove = _remove
