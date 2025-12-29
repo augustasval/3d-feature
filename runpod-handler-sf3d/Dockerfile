@@ -1,0 +1,66 @@
+# SF3D (Stable Fast 3D) RunPod Serverless Handler
+# High-quality 3D mesh generation with UV textures
+# GPU: 6GB+ VRAM recommended
+
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV HF_HOME=/app/hf_cache
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    git \
+    wget \
+    cmake \
+    ninja-build \
+    build-essential \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create working directory
+WORKDIR /app
+
+# Install PyTorch with CUDA support
+RUN pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+
+# Clone ComfyUI (required dependency for SF3D)
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/ComfyUI
+
+# Install ComfyUI requirements
+WORKDIR /app/ComfyUI
+RUN pip3 install -r requirements.txt
+
+# Clone SF3D repository
+RUN git clone https://github.com/Stability-AI/stable-fast-3d.git /app/sf3d
+
+# Install SF3D dependencies
+WORKDIR /app/sf3d
+RUN pip3 install -U setuptools==69.5.1 wheel
+RUN pip3 install -r requirements.txt
+
+# Install additional handler dependencies
+RUN pip3 install --no-cache-dir \
+    runpod \
+    rembg \
+    huggingface-hub
+
+# Copy handler
+WORKDIR /app
+COPY handler.py /app/handler.py
+
+# Set Python path (include both SF3D and ComfyUI)
+ENV PYTHONPATH="/app/sf3d:/app/ComfyUI"
+
+# Run handler
+CMD ["python3", "-u", "/app/handler.py"]
