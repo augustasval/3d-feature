@@ -44,6 +44,9 @@ RUN pip3 install -r requirements.txt
 # Clone SF3D repository
 RUN git clone https://github.com/Stability-AI/stable-fast-3d.git /app/sf3d
 
+# Remove root __init__.py (it's for ComfyUI and shadows the actual sf3d package)
+RUN rm -f /app/sf3d/__init__.py
+
 # Install SF3D dependencies
 WORKDIR /app/sf3d
 RUN pip3 install -U setuptools==69.5.1 wheel
