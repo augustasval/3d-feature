@@ -77,11 +77,9 @@ RUN pip3 install --no-cache-dir \
     trimesh \
     pygltflib
 
-# Download Hunyuan3D-2 model weights (public model, no token needed)
-RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download('tencent/Hunyuan3D-2', local_dir='/app/models/hunyuan3d-2')" || echo "Model download skipped - will download at runtime"
-
-# Download rembg model for background removal
-RUN python3 -c "from rembg import new_session; new_session('u2net')" || echo "rembg model download skipped"
+# Skip model downloads during build to avoid timeout
+# Models will be downloaded on first run and cached by RunPod
+# Hunyuan3D-2: ~10GB, rembg u2net: ~170MB
 
 # Copy handler
 WORKDIR /app
