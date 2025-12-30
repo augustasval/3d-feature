@@ -11,6 +11,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_NO_CACHE_DIR=1
 ENV HF_HOME=/app/models
 
+# CUDA environment for compilation
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH="${CUDA_HOME}/bin:${PATH}"
+ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
+ENV TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0"
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     python3.10 \
@@ -46,8 +52,8 @@ RUN git clone https://github.com/deepbeepmeep/Hunyuan3D-2GP.git /app/hunyuan3d
 # Install Hunyuan3D dependencies
 WORKDIR /app/hunyuan3d
 
-# Install diso first with --no-build-isolation (it needs torch during build)
-RUN pip3 install --no-build-isolation diso
+# Install diso from source (requires CUDA compilation)
+RUN pip3 install --no-build-isolation --verbose git+https://github.com/SarahWeiii/diso.git
 
 # Install remaining requirements (skip diso since it's already installed)
 RUN pip3 install -r requirements.txt || pip3 install $(grep -v '^diso' requirements.txt | tr '\n' ' ')
