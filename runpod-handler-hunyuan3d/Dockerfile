@@ -52,14 +52,18 @@ RUN git clone https://github.com/deepbeepmeep/Hunyuan3D-2GP.git /app/hunyuan3d
 # Install Hunyuan3D dependencies
 WORKDIR /app/hunyuan3d
 
-# Install diso from source (requires CUDA compilation)
+# Verify git is available (cache bust v2)
+RUN which git && git --version
+
+# Install diso from source (requires CUDA compilation) - optional, skip if fails
 RUN git clone https://github.com/SarahWeiii/diso.git /tmp/diso && \
     cd /tmp/diso && \
     pip3 install --no-build-isolation . && \
-    rm -rf /tmp/diso
+    rm -rf /tmp/diso || echo "DISO installation failed - will use fallback mesh extraction"
 
-# Install remaining requirements (skip diso since it's already installed)
-RUN pip3 install -r requirements.txt || pip3 install $(grep -v '^diso' requirements.txt | tr '\n' ' ')
+# Install remaining requirements (skip diso since it's handled above)
+RUN grep -v '^diso' requirements.txt > /tmp/requirements_no_diso.txt && \
+    pip3 install -r /tmp/requirements_no_diso.txt
 
 # Build custom rasterizer for texture generation
 RUN cd hy3dgen/texgen/custom_rasterizer && python3 setup.py install
