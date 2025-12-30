@@ -72,7 +72,7 @@ RUN python3 -c "from rembg import new_session; new_session('u2net')" || echo "re
 
 # Copy handler
 WORKDIR /app
-COPY handler.py /app/handler.py
+COPY runpod-handler-hunyuan3d/handler.py /app/handler.py
 
 # Set Python path to include Hunyuan3D
 ENV PYTHONPATH="/app/hunyuan3d"
