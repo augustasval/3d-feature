@@ -77,9 +77,14 @@ RUN pip3 install --no-cache-dir \
     trimesh \
     pygltflib
 
-# Skip model downloads during build to avoid timeout
-# Models will be downloaded on first run and cached by RunPod
-# Hunyuan3D-2: ~10GB, rembg u2net: ~170MB
+# Model download control (set DOWNLOAD_MODELS=true for local builds with no time limit)
+ARG DOWNLOAD_MODELS=false
+
+# Download models if enabled (Hunyuan3D-2: ~10GB, rembg u2net: ~170MB)
+RUN if [ "$DOWNLOAD_MODELS" = "true" ]; then \
+    python3 -c "from huggingface_hub import snapshot_download; snapshot_download('tencent/Hunyuan3D-2', local_dir='/app/models/hunyuan3d-2')" && \
+    python3 -c "from rembg import new_session; new_session('u2net')"; \
+    else echo "Skipping model download - will download at runtime"; fi
 
 # Copy handler
 WORKDIR /app
