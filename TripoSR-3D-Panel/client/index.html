@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TripoSR 3D</title>
+  <title>3D Model Generator</title>
   <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
@@ -20,11 +20,13 @@
           <input type="password" id="api-key" placeholder="Enter your RunPod API key">
           <button id="toggle-key-visibility" class="icon-btn" title="Toggle visibility">&#128065;</button>
         </div>
+        <small class="help-text">Get your key at <a href="https://www.runpod.io/console/user/settings" target="_blank">runpod.io</a></small>
       </div>
 
       <div class="form-group">
-        <label for="endpoint-id">TripoSR Endpoint ID</label>
-        <input type="text" id="endpoint-id" placeholder="Enter your endpoint ID">
+        <label for="endpoint-id">Endpoint ID</label>
+        <input type="text" id="endpoint-id" placeholder="Enter your Hunyuan3D endpoint ID">
+        <small class="help-text">From your RunPod Serverless endpoint</small>
       </div>
 
       <div class="status-indicator" id="connection-status">
@@ -64,20 +66,31 @@
     </div>
 
     <div class="form-group">
-      <label for="mesh-resolution">Mesh Resolution</label>
-      <select id="mesh-resolution">
-        <option value="128">128 (Fast)</option>
-        <option value="256" selected>256 (Balanced)</option>
-        <option value="512">512 (Detailed)</option>
+      <label for="memory-profile">Memory Profile</label>
+      <select id="memory-profile">
+        <option value="1">1 - High Speed (24GB+ VRAM)</option>
+        <option value="2">2 - Balanced (16GB+ VRAM)</option>
+        <option value="3" selected>3 - Standard (12GB+ VRAM)</option>
+        <option value="4">4 - Low Memory (8GB+ VRAM)</option>
+        <option value="5">5 - Minimal (6GB+ VRAM)</option>
       </select>
+      <small class="help-text">Higher = less VRAM but slower generation</small>
     </div>
 
-    <div class="form-group">
-      <label for="output-format">Output Format</label>
-      <select id="output-format">
-        <option value="glb" selected>GLB (recommended)</option>
-        <option value="obj">OBJ + MTL</option>
-      </select>
+    <div class="form-group checkbox-group">
+      <label>
+        <input type="checkbox" id="generate-texture" checked>
+        Generate Texture
+      </label>
+      <small class="help-text">Apply PBR textures to the mesh (recommended)</small>
+    </div>
+
+    <div class="form-group checkbox-group">
+      <label>
+        <input type="checkbox" id="remove-background" checked>
+        Auto Remove Background
+      </label>
+      <small class="help-text">Automatically isolate subject from background</small>
     </div>
 
     <div class="form-group">

@@ -10,8 +10,9 @@ class SettingsManager {
             apiKey: '',
             endpointId: '',
             defaultForegroundRatio: 0.85,
-            defaultMeshResolution: 256,
-            defaultOutputFormat: 'glb',
+            defaultMemoryProfile: 3,
+            generateTexture: true,
+            removeBackground: true,
             outputFolder: ''
         };
     }
@@ -102,7 +103,7 @@ class SettingsManager {
         if (!settings.endpointId || settings.endpointId.trim() === '') {
             return {
                 isValid: false,
-                message: 'Endpoint ID is required. Please enter your TripoSR endpoint ID.'
+                message: 'Endpoint ID is required. Please enter your Hunyuan3D endpoint ID.'
             };
         }
 

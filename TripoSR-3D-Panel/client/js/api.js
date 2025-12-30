@@ -1,38 +1,47 @@
 /**
- * RunPod API Client for TripoSR 3D Generation
+ * RunPod API Client for Hunyuan3D-2 3D Generation
+ * Self-hosted on RunPod Serverless for 10x cost savings
  */
 
-class TripoSRAPIClient {
+class RunPodAPIClient {
     constructor(apiKey, endpointId) {
         this.apiKey = apiKey;
         this.endpointId = endpointId;
-        this.baseURL = `https://api.runpod.ai/v2/${endpointId}`;
+        this.baseURL = 'https://api.runpod.ai/v2';
         this.pollInterval = 2000; // 2 seconds
-        this.maxPollAttempts = 120; // 4 minutes max (120 * 2s)
+        this.maxPollAttempts = 90; // 3 minutes max (90 * 2s)
         this.currentJobId = null;
     }
 
     /**
      * Update API credentials
      * @param {string} apiKey - RunPod API key
-     * @param {string} endpointId - TripoSR endpoint ID
+     * @param {string} endpointId - RunPod endpoint ID
      */
     updateCredentials(apiKey, endpointId) {
         this.apiKey = apiKey;
         this.endpointId = endpointId;
-        this.baseURL = `https://api.runpod.ai/v2/${endpointId}`;
     }
 
     /**
-     * Test connection to the RunPod endpoint
+     * Test connection to RunPod API
      * @returns {Promise<Object>} Connection test result
      */
     async testConnection() {
         try {
-            const response = await fetch(`${this.baseURL}/health`, {
+            if (!this.apiKey || !this.endpointId) {
+                return {
+                    success: false,
+                    error: 'Missing API key or endpoint ID'
+                };
+            }
+
+            // Test by checking endpoint health
+            const response = await fetch(`${this.baseURL}/${this.endpointId}/health`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
@@ -40,7 +49,7 @@ class TripoSRAPIClient {
                 const data = await response.json();
                 return {
                     success: true,
-                    status: data.status || 'healthy',
+                    status: 'Connected',
                     workers: data.workers || {}
                 };
             } else if (response.status === 401) {
@@ -68,7 +77,7 @@ class TripoSRAPIClient {
     }
 
     /**
-     * Generate 3D model from image
+     * Generate 3D model from image using Hunyuan3D-2
      * @param {string} imageBase64 - Base64 encoded image
      * @param {Object} options - Generation options
      * @param {Function} onProgress - Progress callback
@@ -76,40 +85,40 @@ class TripoSRAPIClient {
      */
     async generate3D(imageBase64, options = {}, onProgress = null) {
         const {
-            foreground_ratio = 0.85,
-            mc_resolution = 256,
-            output_format = 'glb'
+            generateTexture = true,
+            removeBackground = true,
+            profile = 3
         } = options;
 
-        // Submit job
-        const submitResponse = await this.submitJob({
+        // Create job
+        const createResponse = await this.createJob({
             image: imageBase64,
-            foreground_ratio,
-            mc_resolution,
-            output_format
+            generate_texture: generateTexture,
+            remove_background: removeBackground,
+            profile: profile
         });
 
-        if (!submitResponse.success) {
-            throw new Error(submitResponse.error || 'Failed to submit job');
+        if (!createResponse.success) {
+            throw new Error(createResponse.error || 'Failed to create job');
         }
 
-        this.currentJobId = submitResponse.id;
+        this.currentJobId = createResponse.id;
 
         // Poll for completion
-        const result = await this.pollJobStatus(submitResponse.id, onProgress);
+        const result = await this.pollJob(createResponse.id, onProgress);
         this.currentJobId = null;
 
         return result;
     }
 
     /**
-     * Submit a job to RunPod
-     * @param {Object} input - Job input data
-     * @returns {Promise<Object>} Job submission result
+     * Create a job on RunPod
+     * @param {Object} input - Job input parameters
+     * @returns {Promise<Object>} Job creation result
      */
-    async submitJob(input) {
+    async createJob(input) {
         try {
-            const response = await fetch(`${this.baseURL}/run`, {
+            const response = await fetch(`${this.baseURL}/${this.endpointId}/run`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
@@ -119,14 +128,15 @@ class TripoSRAPIClient {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
+                const errorData = await response.json().catch(() => ({}));
                 return {
                     success: false,
-                    error: `HTTP ${response.status}: ${errorText}`
+                    error: errorData.error || `HTTP ${response.status}`
                 };
             }
 
             const data = await response.json();
+
             return {
                 success: true,
                 id: data.id,
@@ -135,7 +145,7 @@ class TripoSRAPIClient {
         } catch (error) {
             return {
                 success: false,
-                error: `Submit failed: ${error.message}`
+                error: `Request failed: ${error.message}`
             };
         }
     }
@@ -146,7 +156,7 @@ class TripoSRAPIClient {
      * @param {Function} onProgress - Progress callback
      * @returns {Promise<Object>} Final job result
      */
-    async pollJobStatus(jobId, onProgress = null) {
+    async pollJob(jobId, onProgress = null) {
         let attempts = 0;
 
         while (attempts < this.maxPollAttempts) {
@@ -154,12 +164,14 @@ class TripoSRAPIClient {
             attempts++;
 
             try {
-                const response = await fetch(`${this.baseURL}/status/${jobId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${this.apiKey}`
+                const response = await fetch(
+                    `${this.baseURL}/${this.endpointId}/status/${jobId}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${this.apiKey}`
+                        }
                     }
-                });
+                );
 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}`);
@@ -179,9 +191,20 @@ class TripoSRAPIClient {
                 // Check status
                 switch (data.status) {
                     case 'COMPLETED':
+                        const output = data.output || {};
+                        if (output.error) {
+                            return {
+                                success: false,
+                                error: output.error
+                            };
+                        }
                         return {
                             success: true,
-                            ...data.output
+                            model_base64: output.model_base64,
+                            file_size: output.file_size,
+                            format: output.format || 'glb',
+                            textured: output.textured,
+                            execution_time: output.execution_time
                         };
 
                     case 'FAILED':
@@ -194,12 +217,6 @@ class TripoSRAPIClient {
                         return {
                             success: false,
                             error: 'Job was cancelled'
-                        };
-
-                    case 'TIMED_OUT':
-                        return {
-                            success: false,
-                            error: 'Job timed out on server'
                         };
 
                     case 'IN_QUEUE':
@@ -219,7 +236,7 @@ class TripoSRAPIClient {
         // Max attempts reached
         return {
             success: false,
-            error: 'Polling timeout - job took too long'
+            error: 'Timeout - job took too long'
         };
     }
 
@@ -241,31 +258,21 @@ class TripoSRAPIClient {
      */
     async cancelJob(jobId) {
         try {
-            const response = await fetch(`${this.baseURL}/cancel/${jobId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`
+            const response = await fetch(
+                `${this.baseURL}/${this.endpointId}/cancel/${jobId}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`
+                    }
                 }
-            });
+            );
 
             return response.ok;
         } catch (error) {
             console.error('Cancel failed:', error);
             return false;
         }
-    }
-
-    /**
-     * Download file from URL
-     * @param {string} url - URL to download from
-     * @returns {Promise<ArrayBuffer>} Downloaded data
-     */
-    async downloadFile(url) {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Download failed: ${response.status}`);
-        }
-        return response.arrayBuffer();
     }
 
     /**
@@ -278,4 +285,8 @@ class TripoSRAPIClient {
     }
 }
 
-console.log('api.js loaded');
+// Alias for compatibility with existing code
+const ReplicateAPIClient = RunPodAPIClient;
+const TripoSRAPIClient = RunPodAPIClient;
+
+console.log('api.js loaded (RunPod/Hunyuan3D-2)');

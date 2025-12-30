@@ -27,7 +27,7 @@ class TripoPanel {
 
         // Initialize API client if credentials available
         if (settings.apiKey && settings.endpointId) {
-            this.apiClient = new TripoSRAPIClient(settings.apiKey, settings.endpointId);
+            this.apiClient = new RunPodAPIClient(settings.apiKey, settings.endpointId);
         }
 
         // Get default output folder
@@ -49,20 +49,28 @@ class TripoPanel {
      */
     restoreSettings(settings) {
         const apiKeyInput = document.getElementById('api-key');
-        const endpointInput = document.getElementById('endpoint-id');
+        const endpointIdInput = document.getElementById('endpoint-id');
         const foregroundSlider = document.getElementById('foreground-ratio');
         const foregroundValue = document.getElementById('foreground-value');
-        const resolutionSelect = document.getElementById('mesh-resolution');
-        const formatSelect = document.getElementById('output-format');
+        const memoryProfileSelect = document.getElementById('memory-profile');
+        const generateTextureCheckbox = document.getElementById('generate-texture');
+        const removeBackgroundCheckbox = document.getElementById('remove-background');
 
         if (apiKeyInput) apiKeyInput.value = settings.apiKey || '';
-        if (endpointInput) endpointInput.value = settings.endpointId || '';
+        if (endpointIdInput) endpointIdInput.value = settings.endpointId || '';
         if (foregroundSlider) {
             foregroundSlider.value = settings.defaultForegroundRatio || 0.85;
             if (foregroundValue) foregroundValue.textContent = foregroundSlider.value;
         }
-        if (resolutionSelect) resolutionSelect.value = settings.defaultMeshResolution || 256;
-        if (formatSelect) formatSelect.value = settings.defaultOutputFormat || 'glb';
+        if (memoryProfileSelect) {
+            memoryProfileSelect.value = settings.defaultMemoryProfile || 3;
+        }
+        if (generateTextureCheckbox) {
+            generateTextureCheckbox.checked = settings.generateTexture !== false;
+        }
+        if (removeBackgroundCheckbox) {
+            removeBackgroundCheckbox.checked = settings.removeBackground !== false;
+        }
     }
 
     /**
@@ -72,15 +80,17 @@ class TripoPanel {
         const apiKey = document.getElementById('api-key')?.value || '';
         const endpointId = document.getElementById('endpoint-id')?.value || '';
         const foregroundRatio = parseFloat(document.getElementById('foreground-ratio')?.value) || 0.85;
-        const meshResolution = parseInt(document.getElementById('mesh-resolution')?.value) || 256;
-        const outputFormat = document.getElementById('output-format')?.value || 'glb';
+        const memoryProfile = parseInt(document.getElementById('memory-profile')?.value) || 3;
+        const generateTexture = document.getElementById('generate-texture')?.checked !== false;
+        const removeBackground = document.getElementById('remove-background')?.checked !== false;
 
         const saved = this.settings.save({
             apiKey,
             endpointId,
             defaultForegroundRatio: foregroundRatio,
-            defaultMeshResolution: meshResolution,
-            defaultOutputFormat: outputFormat,
+            defaultMemoryProfile: memoryProfile,
+            generateTexture,
+            removeBackground,
             outputFolder: this.outputFolder
         });
 
@@ -89,7 +99,7 @@ class TripoPanel {
             if (this.apiClient) {
                 this.apiClient.updateCredentials(apiKey, endpointId);
             } else {
-                this.apiClient = new TripoSRAPIClient(apiKey, endpointId);
+                this.apiClient = new RunPodAPIClient(apiKey, endpointId);
             }
         }
 
@@ -198,7 +208,7 @@ class TripoPanel {
         showProgress('Testing connection...');
         updateConnectionStatus(null, 'Testing...');
 
-        const client = new TripoSRAPIClient(apiKey, endpointId);
+        const client = new RunPodAPIClient(apiKey, endpointId);
         const result = await client.testConnection();
 
         if (result.success) {
@@ -301,11 +311,11 @@ class TripoPanel {
             return;
         }
 
-        // Get generation options
+        // Get generation options for Hunyuan3D
         const options = {
-            foreground_ratio: parseFloat(document.getElementById('foreground-ratio')?.value) || 0.85,
-            mc_resolution: parseInt(document.getElementById('mesh-resolution')?.value) || 256,
-            output_format: document.getElementById('output-format')?.value || 'glb'
+            removeBackground: document.getElementById('remove-background')?.checked !== false,
+            generateTexture: document.getElementById('generate-texture')?.checked !== false,
+            profile: parseInt(document.getElementById('memory-profile')?.value) || 3
         };
 
         // Start processing
@@ -338,9 +348,9 @@ class TripoPanel {
                 throw new Error(result.error || 'Generation failed');
             }
 
-            // Step 4: Save result
+            // Step 4: Save result (Hunyuan3D outputs GLB format)
             this.updateProgressStatus('Saving model...');
-            const savedPath = await this.saveGeneratedModel(result, layerName, options.output_format);
+            const savedPath = await this.saveGeneratedModel(result, layerName, 'glb');
 
             // Step 5: Cleanup temp file
             this.cleanupTempFile(exportData.pngFilePath);
